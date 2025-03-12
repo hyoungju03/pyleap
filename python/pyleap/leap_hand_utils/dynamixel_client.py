@@ -331,7 +331,8 @@ class DynamixelClient:
                     dxl_id, error_message)
             if context is not None:
                 error_message = '> {}: {}'.format(context, error_message)
-            logging.error(error_message)
+            # suppressing error_message display for cleaner output
+            # logging.error(error_message)
             return False
         return True
 
