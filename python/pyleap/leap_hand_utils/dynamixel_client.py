@@ -307,12 +307,34 @@ class DynamixelClient:
 
         sync_writer.clearParam()
 
+    def _reconnect(self, backoff: float = 1.0):
+        """
+        Close anything half-open, then loop until we can re-open the same port.
+        """
+        logging.warning("Attempting to reconnect to %s …", self.port_name)
+        # ensure port is closed
+        try:
+            if self.port_handler.is_open:
+                self.port_handler.closePort()
+        except Exception:
+            pass
+
+        # retry open+baud until success
+        while True:
+            try:
+                if self.port_handler.openPort():
+                    self.port_handler.setBaudRate(self.baudrate)
+                    logging.info("Reconnected to %s at %dbps", self.port_name, self.baudrate)
+                    break
+            except Exception as e:
+                logging.warning("Reconnect failed (%s); retrying in %.1fs", e, backoff)
+            time.sleep(backoff)
+
     def check_connected(self):
         """Ensures the robot is connected."""
-        if self.lazy_connect and not self.is_connected:
-            self.connect()
         if not self.is_connected:
-            raise OSError('Must call connect() first.')
+            logging.info("Connection lost to port  %s", self.port_name)
+            self._reconnect()
 
     def handle_packet_result(self,
                              comm_result: int,
@@ -331,8 +353,12 @@ class DynamixelClient:
                     dxl_id, error_message)
             if context is not None:
                 error_message = '> {}: {}'.format(context, error_message)
-            # suppressing error_message display for cleaner output
-            # logging.error(error_message)
+
+            # treat USB disconnect immediately by
+            # attempting the reconnection to the same port
+            if comm_result == self.dxl.COMM_RX_TIMEOUT:
+                self._reconnect()
+
             return False
         return True
 
@@ -628,7 +654,7 @@ if __name__ == '__main__':
         default='/dev/ttyUSB0',
         help='The Dynamixel device to connect to.')
     parser.add_argument(
-        '-b', '--baud', default=1000000, help='The baudrate to connect with.')
+        '-b', '--baud', default=4000000, help='The baudrate to connect with.')
     parsed_args = parser.parse_args()
 
     motors = [int(motor) for motor in parsed_args.motors.split(',')]
@@ -638,15 +664,15 @@ if __name__ == '__main__':
     with DynamixelClient(motors, parsed_args.device,
                          parsed_args.baud) as dxl_client:
         for step in itertools.count():
-            if step > 0 and step % 50 == 0:
-                way_point = way_points[(step // 100) % len(way_points)]
-                print('Writing: {}'.format(way_point.tolist()))
-                dxl_client.write_desired_pos(motors, way_point)
+            # if step > 0 and step % 50 == 0:
+            #     way_point = way_points[(step // 100) % len(way_points)]
+            #     print('Writing: {}'.format(way_point.tolist()))
+            #     dxl_client.write_desired_pos(motors, way_point)
             read_start = time.time()
             pos_now, vel_now, cur_now = dxl_client.read_pos_vel_cur()
             if step % 5 == 0:
                 print('[{}] Frequency: {:.2f} Hz'.format(
                     step, 1.0 / (time.time() - read_start)))
                 print('> Pos: {}'.format(pos_now.tolist()))
-                print('> Vel: {}'.format(vel_now.tolist()))
-                print('> Cur: {}'.format(cur_now.tolist()))
+                # print('> Vel: {}'.format(vel_now.tolist()))
+                # print('> Cur: {}'.format(cur_now.tolist()))

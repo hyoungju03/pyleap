@@ -35,6 +35,8 @@ class LeapNode:
         # For example ls /dev/serial/by-id/* to find your LEAP Hand. Then use the result.  
         # For example: /dev/serial/by-id/usb-FTDI_USB__-__Serial_Converter_FT7W91VW-if00-port0
         self.motors = motors = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
+
+        # print("tttttttttttttttttttttttttttttttttttttttttttttttttdfdfds\n\n\n\n\n\n\n\n\n\n")
         try:
             self.dxl_client = DynamixelClient(motors, port, 4000000)
             self.dxl_client.connect()
