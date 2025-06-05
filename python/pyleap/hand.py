@@ -58,6 +58,8 @@ class LeapNode:
         self.dxl_client.sync_write([0,4,8], np.ones(3) * (self.kD * 0.75), 80, 2) # Dgain damping for side to side should be a bit less
         #Max at current (in unit 1ma) so don't overheat and grip too hard #500 normal or #350 for lite
         self.dxl_client.sync_write(motors, np.ones(len(motors)) * self.curr_lim, 102, 2)
+        if torque:
+            self.set_zeros()
 
     #Set to zero position w.r.t allegro hand
     def set_zeros(self):

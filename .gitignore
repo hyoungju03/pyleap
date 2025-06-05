@@ -152,3 +152,6 @@ dmypy.json
 
 # Cython debug symbols
 cython_debug/
+
+# json to store joint angles: empirical step response analysis
+angles.json
